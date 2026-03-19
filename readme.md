@@ -4,6 +4,15 @@ Includes:
 - Docker 
 - Partner entity
 
+## Clone the repository
+```shell
+git clone https://github.com/marianmitache/bfnl-backend-case-main.git
+```
+
+## Set up Environment variables
+```shell
+cp .env.example .env
+```
 ## Installation
 
 ```shell
@@ -17,6 +26,14 @@ docker compose exec php-fpm bin/console doctrine:fixtures:load
 Api is available at: 'http://localhost:49000/api'
 
 ## Testing
-```sshell
-docker compose exec php-fpm php vendor/vin/phpunit
+
+### Set up test db
+```shell
+docker compose exec php-fpm php bin/console doctrine:database:create --env=test
+docker compose exec php-fpm php bin/console doctrine:migrations:migrate --env=test --no-interaction
+```
+
+### Test
+```shell
+docker compose exec php-fpm php vendor/bin/phpunit
 ```
