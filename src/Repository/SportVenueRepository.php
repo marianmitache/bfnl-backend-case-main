@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\SportVenue;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * @extends ServiceEntityRepository<SportVenue>
@@ -15,29 +18,38 @@ class SportVenueRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, SportVenue::class);
     }
+	
+	public static function filterByDistance(
+		QueryBuilder $qb,
+		float $lat,
+		float $lng,
+		float $distance
+	): void
+	{
+		$alias = $qb->getRootAliases()[0];
+		
+		$latRange = $distance / 111;
+		$lngRange = $distance / (111 * cos(deg2rad($lat)));
 
-    //    /**
-    //     * @return SportVenue[] Returns an array of SportVenue objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('s.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+		$minLat = $lat - $latRange;
+		$maxLat = $lat + $latRange;
+		$minLng = $lng - $lngRange;
+		$maxLng = $lng + $lngRange;
 
-    //    public function findOneBySomeField($value): ?SportVenue
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+		$qb
+			->andWhere("$alias.lat BETWEEN :minLat AND :maxLat")
+			->andWhere("$alias.lng BETWEEN :minLng AND :maxLng")
+			->andWhere("(6371 * ACOS(
+    			COS(RADIANS(:lat)) * COS(RADIANS($alias.lat)) *
+        		COS(RADIANS($alias.lng) - RADIANS(:lng)) +
+        		SIN(RADIANS(:lat)) * SIN(RADIANS($alias.lat))
+    		)) <= :distance")
+			->setParameter('minLat', $minLat)
+			->setParameter('maxLat', $maxLat)
+			->setParameter('minLng', $minLng)
+			->setParameter('maxLng', $maxLng)
+			->setParameter('lat', $lat)
+			->setParameter('lng', $lng)
+			->setParameter('distance', $distance);
+	}
 }
